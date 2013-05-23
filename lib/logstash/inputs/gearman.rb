@@ -53,10 +53,20 @@ class LogStash::Inputs::Gearman < LogStash::Inputs::Threadable
       #Forward input to LogStash
       output_queue << to_event(data, 'gearman://' + server + ':' + port.to_s() + '/' + @queue )
       true # Report success.
-    end
+    end    
     @logger.debug? and @logger.debug("Starting gearman worker")
     while @worker.worker_enabled
-      @worker.work
+      begin
+        @worker.work
+      rescue Gearman::ServerDownException => e
+        @logger.warn("#{self.class.name}: Lost connection to gearmand server, sleeping...", :exception => e.inspect)
+        sleep @reconnect_interval if @reconnect_interval
+        #Need to reconnect to server here , does not seem to connect back automatically then server is back online.
+        retry
+      rescue Exception => e
+        @logger.warn("#{self.class.name}: Caught Exception", :exception => e.inspect)
+        retry
+      end
     end
     @logger.debug? and @logger.debug("Stopping gearman worker")
   end # def run

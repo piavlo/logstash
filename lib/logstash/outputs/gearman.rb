@@ -29,8 +29,12 @@ class LogStash::Outputs::Gearman < LogStash::Outputs::Base
 
     @logger.debug? and @logger.debug("sending event as gearman job", :event => event)
 
-  	task = Gearman::Task.new(@queue, event.to_json, { :background => true })
-    @taskset.add_task(task)
-    @taskset.wait(0)
+    begin
+  	  task = Gearman::Task.new(@queue, event.to_json, { :background => true })
+      @taskset.add_task(task)
+      @taskset.wait(0)
+    rescue Exception => e
+      @logger.warn("#{self.class.name}: Caught Exception", :exception => e.inspect)
+    end
   end # def event
 end # class LogStash::Outputs::Gearman
