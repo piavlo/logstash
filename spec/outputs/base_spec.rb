@@ -44,4 +44,11 @@ describe "LogStash::Outputs::Base#output?" do
     expect(output.receive(LogStash::Event.new({"tags" => ["value"]}))).to eq(false)
     expect(output.receive(LogStash::Event.new({"tags" => ["notvalue"]}))).to eq(true)
   end
+
+  it "should not output old events" do
+    output = LogStash::Outputs::NOOP.new("ignore_older_than" => 60)
+    expect(output.receive(LogStash::Event.new({}))).to eq(true)
+    expect(output.receive(LogStash::Event.new({"@timestamp" => Time.now - 30}))).to eq(true)
+    expect(output.receive(LogStash::Event.new({"@timestamp" => Time.now - 90}))).to eq(false)
+  end
 end

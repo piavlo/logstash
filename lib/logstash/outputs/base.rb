@@ -33,6 +33,9 @@ class LogStash::Outputs::Base < LogStash::Plugin
   # Note that this setting may not be useful for all outputs.
   config :workers, :validate => :number, :default => 1
 
+  # Don't output events that have @timestamp older than specified number of seconds.
+  config :ignore_older_than, :validate => :number, :default => 0
+
   attr_reader :worker_plugins, :worker_queue
 
   public
@@ -117,6 +120,11 @@ class LogStash::Outputs::Base < LogStash::Plugin
                                          :diff_tags => diff_tags, :exclude_tags => @exclude_tags, :event => event)
         return false
       end
+    end
+
+    if @ignore_older_than > 0 && Time.now.to_i - event.timestamp.to_i > @ignore_older_than
+      @logger.debug? and @logger.debug("outputs/#{self.class.name}: Dropping event because timesamp is too old", :event => event)
+      return false
     end
 
     return true
